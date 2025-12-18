@@ -41,7 +41,7 @@ export default class Manager_PlayerHud extends hz.Component<
   typeof Manager_PlayerHud
 > {
   static propsDefinition = {
-    FetcherHud: { type: hz.PropTypes.Entity, required: true },
+    FetcherHudNonVr: { type: hz.PropTypes.Entity, required: true },
     CashierHud: { type: hz.PropTypes.Entity, required: true },
     cashEarnedNotifUI: { type: hz.PropTypes.Entity, required: true },
     orderDeliveredNotifUI: { type: hz.PropTypes.Entity, required: true },
@@ -166,7 +166,7 @@ export default class Manager_PlayerHud extends hz.Component<
 
   // Function to hide all HUDs
   hideAllHuds(players: hz.Player[]) {
-    this.props.FetcherHud!.setVisibilityForPlayers(
+    this.props.FetcherHudNonVr!.setVisibilityForPlayers(
       players,
       hz.PlayerVisibilityMode.HiddenFrom
     );
@@ -185,12 +185,17 @@ export default class Manager_PlayerHud extends hz.Component<
     switch (playerRole) {
       case PlayerRoles.Fetcher:
         // if (!gameManager?.isThisTrainingSession()) {
-        this.props.FetcherHud!.visible.set(true);
-        this.props.FetcherHud!.setVisibilityForPlayers(
-          players,
+        const nonVrPlayers = players.filter((p) =>
+          p.isValidReference &&
+          !Npc.playerIsNpc(p) &&
+          p.deviceType.get() !== hz.PlayerDeviceType.VR
+        ); console.log(`Fetcher players: ${players.length}`);
+        this.props.FetcherHudNonVr!.visible.set(true);
+        this.props.FetcherHudNonVr!.setVisibilityForPlayers(
+          nonVrPlayers,
           hz.PlayerVisibilityMode.VisibleTo
         );
-        // }
+
         break;
       case PlayerRoles.Scooper:
         break;
@@ -511,10 +516,12 @@ export default class Manager_PlayerHud extends hz.Component<
         [],
         hz.PlayerVisibilityMode.VisibleTo
       );
-      fetcherButtonUi.setVisibilityForPlayers(
-        [player],
-        hz.PlayerVisibilityMode.VisibleTo
-      );
+      if (player.deviceType.get() === hz.PlayerDeviceType.Desktop || player.deviceType.get() === hz.PlayerDeviceType.Mobile) {
+        fetcherButtonUi.setVisibilityForPlayers(
+          [player],
+          hz.PlayerVisibilityMode.VisibleTo
+        );
+      }
       // console.log.*$
       //   `Showing fetcher button UI to player: ${player.name.get()}, ${fetcherButtonUi.visible.get()}`
       // );
@@ -710,10 +717,13 @@ export default class Manager_PlayerHud extends hz.Component<
             [],
             hz.PlayerVisibilityMode.VisibleTo
           );
-          snowfightButtonEntity[0].setVisibilityForPlayers(
-            [player],
-            hz.PlayerVisibilityMode.VisibleTo
-          );
+          if (player.deviceType.get() !== hz.PlayerDeviceType.VR) {
+
+            snowfightButtonEntity[0].setVisibilityForPlayers(
+              [player],
+              hz.PlayerVisibilityMode.VisibleTo
+            );
+          }
           snowfightButtonEntity[0]
             .getComponents(UIButton_Snowfight)[0]
             .setPlayerAndDevice(player);
@@ -785,10 +795,12 @@ export default class Manager_PlayerHud extends hz.Component<
             [],
             hz.PlayerVisibilityMode.VisibleTo
           );
-          danceEmoteButtonEntity[0].setVisibilityForPlayers(
-            [player],
-            hz.PlayerVisibilityMode.VisibleTo
-          );
+          if (player.deviceType.get() !== hz.PlayerDeviceType.VR) {
+            danceEmoteButtonEntity[0].setVisibilityForPlayers(
+              [player],
+              hz.PlayerVisibilityMode.VisibleTo
+            );
+          }
           danceEmoteButtonEntity[0]
             .getComponents(UIButton_DanceEmote)[0]
             .setPlayerAndDevice(player);

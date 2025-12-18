@@ -54,6 +54,10 @@ export default class Trigger_Server_RemoveMess extends Component<
       this.props.messEntity.visible.set(true);
       this.isMessVisible = true;
       this.handleTrigger();
+    } else {
+      this.entity.parent.get()?.visible.set(true);
+      this.isMessVisible = true;
+      this.handleTrigger();
     }
   }
 

@@ -489,6 +489,8 @@ export default class MonsterManager extends Component<typeof MonsterManager> {
         // console.log.*$
         //   `MonsterManager Added item ${this.itemKey} for monster ${monster.index}`
         // );
+        const inBagCount = bagManager?.getTotalItemCount(player) ?? 0;
+        vacuumComp.animateGunForItems(inBagCount);
 
         if (
           totalItems >= capacity - 1 &&

@@ -22,7 +22,7 @@ const INACTIVEBORDERCOLOR = "rgba(255, 255, 255, 0.7)";
 
 const SLOT_COUNT = 5;
 
-export default class HUD_Fetcher extends UIComponent<typeof HUD_Fetcher> {
+export default class HUD_FetcherNonVr extends UIComponent<typeof HUD_FetcherNonVr> {
   static propsDefinition = {
     vacuumIcon: { type: PropTypes.Asset },
     // Item icons mapped to getItems() order
@@ -330,4 +330,4 @@ export default class HUD_Fetcher extends UIComponent<typeof HUD_Fetcher> {
   }
 }
 
-UIComponent.register(HUD_Fetcher);
+UIComponent.register(HUD_FetcherNonVr);

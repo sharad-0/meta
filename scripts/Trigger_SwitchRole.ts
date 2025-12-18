@@ -19,6 +19,7 @@ import {
   bagManager,
   gameManager,
   hapticsManager,
+  hudManager,
   mainArenaManager,
   playerManager,
   propsManager,
@@ -26,18 +27,17 @@ import {
   scooperHandManager,
   serverManager,
 } from "Managers_Instance";
-import { AnalyticsManager } from "AnalyticsManager";
 
 export let playersOnTrigger: Player[] = [];
 export class Trigger_SwitchRole extends Component<typeof Trigger_SwitchRole> {
   static propsDefinition = {
-    roleSwitchUi: { type: PropTypes.Entity, required: true },
+    // roleSwitchUi: { type: PropTypes.Entity, required: true },
   };
 
   preStart() {
-    this.connectLocalBroadcastEvent(PlayerJoinedEvent, () =>
-      this.UpdateVisibility()
-    );
+    // this.connectLocalBroadcastEvent(PlayerJoinedEvent, () =>
+    //   this.UpdateVisibility()
+    // );
 
     this.connectCodeBlockEvent(
       this.entity,
@@ -50,9 +50,9 @@ export class Trigger_SwitchRole extends Component<typeof Trigger_SwitchRole> {
       this.OnPlayerExitTrigger.bind(this)
     );
 
-    this.connectLocalBroadcastEvent(ParlourClosedEvent, () => {
-      this.hideUi();
-    });
+    // this.connectLocalBroadcastEvent(ParlourClosedEvent, () => {
+    //   this.hideUi();
+    // })
 
     this.connectLocalBroadcastEvent(ParlourOpenedEvent, () => {
       this.entity.as(TriggerGizmo).enabled.set(true);
@@ -60,28 +60,26 @@ export class Trigger_SwitchRole extends Component<typeof Trigger_SwitchRole> {
   }
 
   start() {
-    const roleSwitchUI = this.props.roleSwitchUi;
-    if (roleSwitchUI) {
-      //// console.log.*$
-      roleSwitchUI.setVisibilityForPlayers(
-        playerManager?.getCurrentPlayers() ?? [],
-        PlayerVisibilityMode.HiddenFrom
-      );
-    }
+    // const roleSwitchUI = this.props.roleSwitchUi;
+    // if (roleSwitchUI) {
+    //   //// console.log.*$
+    //   roleSwitchUI.setVisibilityForPlayers(
+    //     playerManager?.getCurrentPlayers() ?? [],
+    //     PlayerVisibilityMode.HiddenFrom
+    //   );
+    // }
   }
 
   OnPlayerEnterTrigger(player: Player) {
-
     const playerRec = playerManager?.getPlayerRecord(player);
     if (!mainArenaManager?.isParlourOpen()) {
       return;
     }
     if (playerManager?.getRole(player) != PlayerRoles.Unknown) {
       this.updateRole(player, PlayerRoles.Unknown);
-      this.sendParlourEnterAnalytics(player);
+      hudManager?.refreshHUD();
       return;
     }
-    this.sendParlourEnterAnalytics(player);
     if (playerManager?.isFtueUiRequired(player)) return;
     if (!playersOnTrigger.includes(player)) {
       playersOnTrigger.push(player);
@@ -89,18 +87,14 @@ export class Trigger_SwitchRole extends Component<typeof Trigger_SwitchRole> {
       ringArrowManager?.playerReachedArena(player);
     }
     //// console.log.*$
-    this.UpdateVisibility();
+    // this.UpdateVisibility();
+    this.updateRole(player, PlayerRoles.Server);
+    hudManager?.refreshHUD();
 
-  }
-
-  sendParlourEnterAnalytics(player: Player) {
-    const payload: AreaEnterPayload = {
-      actionArea: "Parlour",
+    Turbo.send(TurboEvents.OnAreaEnter, {
       player: player,
-      actionAreaIsLobbySection: false,
-      actionAreaIsPlayerReadyZone: false,
-    };
-    AnalyticsManager.s_instance.sendAreaEnter(payload);
+      actionArea: "Parlour",
+    } as AreaEnterPayload);
   }
 
   private updateRole(player: Player, role: PlayerRoles): void {
@@ -113,13 +107,14 @@ export class Trigger_SwitchRole extends Component<typeof Trigger_SwitchRole> {
         break;
       case PlayerRoles.Server:
         // serverManager?.resetConePosition(player);
-        serverManager?.onPlayerExitWorld(player); // Reset any server-specific state
+        serverManager?.onPlayerExitWorld(player, true); // Reset any server-specific state
         break;
       case PlayerRoles.Fetcher:
         bagManager?.dumpAllItems(player);
     }
     hapticsManager?.playStrongRumble(player);
     playerManager?.setRole(player, role);
+
     //// console.log.*$
   }
 
@@ -133,18 +128,18 @@ export class Trigger_SwitchRole extends Component<typeof Trigger_SwitchRole> {
   }
 
   UpdateVisibility() {
-    const roleSwitchUI = this.props.roleSwitchUi;
-    if (roleSwitchUI) {
-      roleSwitchUI.visible.set(true);
-      roleSwitchUI.setVisibilityForPlayers(
-        playersOnTrigger,
-        PlayerVisibilityMode.VisibleTo
-      );
-      roleSwitchUI.setVisibilityForPlayers(
-        this.getPlayersToHide(),
-        PlayerVisibilityMode.HiddenFrom
-      );
-    }
+    // const roleSwitchUI = this.props.roleSwitchUi;
+    // if (roleSwitchUI) {
+    //   roleSwitchUI.visible.set(true);
+    //   roleSwitchUI.setVisibilityForPlayers(
+    //     playersOnTrigger,
+    //     PlayerVisibilityMode.VisibleTo
+    //   );
+    //   roleSwitchUI.setVisibilityForPlayers(
+    //     this.getPlayersToHide(),
+    //     PlayerVisibilityMode.HiddenFrom
+    //   );
+    // }
   }
 
   private getPlayersToHide(): Player[] {
@@ -159,11 +154,11 @@ export class Trigger_SwitchRole extends Component<typeof Trigger_SwitchRole> {
   }
 
   hideUi() {
-    playersOnTrigger = [];
-    const roleSwitchUI = this.props.roleSwitchUi;
-    if (roleSwitchUI) {
-      roleSwitchUI.visible.set(false);
-    }
+    // playersOnTrigger = [];
+    // const roleSwitchUI = this.props.roleSwitchUi;
+    // if (roleSwitchUI) {
+    //   roleSwitchUI.visible.set(false);
+    // }
   }
 }
 

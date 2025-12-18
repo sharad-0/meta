@@ -16,6 +16,7 @@ import {
 } from "Managers_Instance";
 import { ActivateFetcherControls } from "Manager_Events";
 import { PlayerCameraEvents } from "PlayerCamera";
+import { Npc } from "horizon/npc";
 
 class Trigger_WholeFetchingArea extends Component<
   typeof Trigger_WholeFetchingArea
@@ -35,7 +36,7 @@ class Trigger_WholeFetchingArea extends Component<
     );
   }
 
-  start() {}
+  start() { }
 
   OnPlayerEnterTrigger(player: Player) {
     const playerRole = playerManager?.getRole(player);
@@ -49,10 +50,18 @@ class Trigger_WholeFetchingArea extends Component<
       // bagPackComp.vacuumOut(true);
 
       // hudManager?.showFetcherButtonUiToPlayer(player);
-      if (gameManager?.isThisTrainingSession()) {
-        vacuumController?.setVacuumState(player);
-      } else {
-        vacuumController?.ActivateFetcherControls(player);
+      // if (gameManager?.isThisTrainingSession()) {
+      //   vacuumController?.setVacuumState(player);
+      // } else {
+      // vacuumController?.ActivateFetcherControls(player);
+      // }
+    }
+
+    if (!Npc.playerIsNpc(player)) {
+      if (playerRole === PlayerRoles.Fetcher) {
+        this.sendNetworkEvent(player, PlayerCameraEvents.SetCameraMode, {
+          mode: CameraMode.FirstPerson,
+        });
       }
     }
   }
@@ -66,8 +75,15 @@ class Trigger_WholeFetchingArea extends Component<
       // if (gameManager?.isThisTrainingSession()) {
       //   vacuumController?.setVacuumState(player);
       // } else {
-      vacuumController?.DeactivateFetcherControls(player);
+      // vacuumController?.DeactivateFetcherControls(player);
 
+      if (!Npc.playerIsNpc(player)) {
+        if (playerRole === PlayerRoles.Fetcher) {
+          this.sendNetworkEvent(player, PlayerCameraEvents.SetCameraMode, {
+            mode: CameraMode.Follow,
+          });
+        }
+      }
       // const bagPackComp = vacuumEntity.getComponents(BagPackAnimator)[0];
       // bagPackComp.vacuumOut(false);
       // this.sendNetworkBroadcastEvent(DeactivateFetcherControls, {

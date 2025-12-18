@@ -1,5 +1,6 @@
 import Component_IceCreamCone from "Component_IceCreamCone";
 import {
+  ConeState,
   CustomAnalyticsEvents,
   IceCream,
   Items,
@@ -51,6 +52,7 @@ export default class Trigger_Scooper_Tray extends hz.Component<
     },
     scooperHud: { type: hz.PropTypes.Entity, required: true },
     conveyorBelt: { type: hz.PropTypes.Entity, required: false },
+    cantServeBoard: { type: hz.PropTypes.Entity, required: true },
   };
 
   private iceCreamInTray: Component_IceCreamCone | null = null;
@@ -59,6 +61,7 @@ export default class Trigger_Scooper_Tray extends hz.Component<
   private scoopersSet: Player[] = [];
   private isOrderSentToServer: boolean = false;
   private isOrderLaneBusy: boolean = false;
+  private canTrigger: boolean = true;
 
   preStart(): void {
     this.connectCodeBlockEvent(
@@ -116,17 +119,18 @@ export default class Trigger_Scooper_Tray extends hz.Component<
     this.entity.as(hz.TriggerGizmo).setWhoCanTrigger([]); // Start with no one able to trigger
     this.connectLocalBroadcastEvent(ResetTrayForOrder, (data) => {
       if (data.trayId && data.trayId == this.props.trayId?.toString()) {
-        this.resetTryItem();
+        this.resetTray();
       }
     });
   }
 
   onPlayerEnterTrigger(player: hz.Player) {
+    if (!this.canTrigger || this.isOrderSentToServer) return;
     // console.log.*$
     //   `[Scooper Tray] Player ${player.name.get()} entered tray trigger.`
     // );
     const itemInPlayerHand =
-      scooperHandManager?.getItemInHand(player) ?? Items.None;
+      scooperHandManager?.getItemTypeInHand(player) ?? Items.None;
 
     // console.log.*$
 
@@ -142,17 +146,24 @@ export default class Trigger_Scooper_Tray extends hz.Component<
       playerAnimations?.playScooperConeDropAnim(player, 2);
       this.addItemAssetToTray(player, itemInPlayerHand);
       this.sendLocalBroadcastEvent(itemDroppedInTray, { player });
-
+      this.nextTriggerDelay();
       // if (gameManager?.isThisTrainingSession()) {
       //   this.handleFTUETriggers(player, itemInPlayerHand);
       // }
-    } else if (this.iceCreamInTray !== null) {
-      this.iceCreamInTray.entity.simulated.set(true);
+    } else if (this.iceCreamInTray !== null && !Npc.playerIsNpc(player)) {
+      this.iceCreamInTray?.SetConeState(ConeState.ScooperHand);
       scooperHandManager?.addIceCreamToHand(player, this.iceCreamInTray);
       playerAnimations?.playScooperConeDropAnim(player, 2);
       this.resetTray();
+      this.nextTriggerDelay();
     }
     this.removeTriggerAccess(player);
+  }
+  async nextTriggerDelay(timer: number = 0.3) {
+    this.canTrigger = false;
+    this.async.setTimeout(() => {
+      this.canTrigger = true;
+    }, timer * 1000);
   }
 
   // handleTrigger(player?: Player, triggerCondition: boolean = false) {
@@ -177,8 +188,9 @@ export default class Trigger_Scooper_Tray extends hz.Component<
   private addItemAssetToTray(player: hz.Player, item: Items) {
     if (item === Items.Cone) {
       const entityInPlayerHand = scooperHandManager?.getEntityInHand(player);
-      scooperHandManager?.emptyHand(player, false);
       const cone = entityInPlayerHand?.getComponents(Component_IceCreamCone)[0];
+      cone?.SetConeState(ConeState.ScooperTray);
+      scooperHandManager?.emptyHand(player, false);
       // console.log.*$
       if (cone) {
         this.iceCreamInTray = cone;
@@ -196,6 +208,7 @@ export default class Trigger_Scooper_Tray extends hz.Component<
           }
         }
         cone.entity.position.set(this.props.conePosition!.position.get());
+        cone.entity.rotation.set(this.props.conePosition!.rotation.get());
         // console.log.*$
         //   `Player ${player.name.get()} added a cone to the tray and set position to ${this.props.conePosition!.position.get()}.`
         // );
@@ -229,10 +242,11 @@ export default class Trigger_Scooper_Tray extends hz.Component<
       // console.log.*$
       this.markHudGreen();
       this.isOrderLaneBusy = true;
-      let currentIcecreamInTray = this.iceCreamInTray;
+      const currentIcecreamInTray = this.iceCreamInTray;
       this.iceCreamInTray = null;
       const tableId = this.props.trayId.toString();
       const order = orderManager?.getOrderFromTable(tableId);
+      this.CloseLaneAccess();
       await this.animateIceCreamToServingSide(currentIcecreamInTray!);
       currentIcecreamInTray?.setConeOrderId(order?.id!);
       orderManager?.addIceCreamEntityForCompletedOrder(
@@ -242,7 +256,6 @@ export default class Trigger_Scooper_Tray extends hz.Component<
       this.orderForTheTable = [];
       // this.refreshTriggerAccess();
       // this.handleTrigger(player, false);
-      this.isOrderSentToServer = true;
 
       this.async.setTimeout(() => {
         this.isOrderLaneBusy = false;
@@ -265,6 +278,7 @@ export default class Trigger_Scooper_Tray extends hz.Component<
       return;
     }
     const conePosition = this.props.coneDropPosForTableId.position.get();
+    const coneRotation = this.props.coneDropPosForTableId.rotation.get();
 
     if (!conePosition) {
       console.warn(
@@ -286,12 +300,14 @@ export default class Trigger_Scooper_Tray extends hz.Component<
     const ok = await mover.moveTo(iceCreamInHand.entity, conePosition, 1.25);
     if (ok) {
       iceCreamInHand.entity.position.set(conePosition);
+      iceCreamInHand.entity.rotation.set(coneRotation);
       this.props.conveyorBelt
         ?.getComponents(Animation_ConveyorBelt)[0]
         ?.animateBelt(false);
       if (themeSessionManager?.isChristmasSessionActive()) {
         iceCreamInHand.setAddonToScoop();
       }
+
     } else {
       console.warn(`[Trigger_Scooper_DropOrder] Cone movement failed`);
     }
@@ -306,15 +322,20 @@ export default class Trigger_Scooper_Tray extends hz.Component<
   resetTray() {
     this.iceCreamInTray = null;
     this.scoopersSet = [];
-    this.markHudWhite();
-    this.isOrderSentToServer = false;
     this.isOrderLaneBusy = false;
+    this.ResetLaneAccess();
+    this.markHudWhite();
     // this.refreshTriggerAccess();
     this.entity.as(hz.TriggerGizmo).setWhoCanTrigger(this.scoopersSet);
   }
 
-  resetTryItem() {
+  ResetLaneAccess() {
     this.isOrderSentToServer = false;
+    this.props.cantServeBoard?.visible.set(false);
+  }
+  CloseLaneAccess() {
+    this.isOrderSentToServer = true;
+    this.props.cantServeBoard?.visible.set(true);
   }
 
   onParlourClosed() {
@@ -326,8 +347,8 @@ export default class Trigger_Scooper_Tray extends hz.Component<
         // );
         this.iceCreamInTray = null;
       });
-      this.resetTray();
     }
+    this.resetTray();
   }
 
   private getOrderForTheTable() {
@@ -421,7 +442,7 @@ export default class Trigger_Scooper_Tray extends hz.Component<
   //     playerManager?.getRolePlayers(PlayerRoles.Scooper) ?? [];
 
   //   for (const p of allScoopers) {
-  //     const handItem = scooperHandManager?.getItemInHand(p) ?? Items.None;
+  //     const handItem = scooperHandManager?.getItemTypeInHand(p) ?? Items.None;
 
   //     if (!this.iceCreamInTray) {
   //       // tray empty → need a cone
@@ -447,7 +468,8 @@ export default class Trigger_Scooper_Tray extends hz.Component<
       Items.None,
     ];
     if (this.scoopersSet.includes(player)) return;
-    const handItem = scooperHandManager?.getItemInHand(player) ?? Items.None;
+    const handItem =
+      scooperHandManager?.getItemTypeInHand(player) ?? Items.None;
 
     if (!this.iceCreamInTray) {
       // tray empty → need a cone
@@ -458,7 +480,9 @@ export default class Trigger_Scooper_Tray extends hz.Component<
         this.scoopersSet.push(player);
       }
     }
-
+    if (this.isOrderSentToServer) {
+      this.scoopersSet = [];
+    }
     this.entity.as(hz.TriggerGizmo).setWhoCanTrigger(this.scoopersSet);
   }
 
@@ -466,6 +490,10 @@ export default class Trigger_Scooper_Tray extends hz.Component<
     const index = this.scoopersSet.indexOf(player);
     if (index !== -1) {
       this.scoopersSet.splice(index, 1);
+    }
+
+    if (this.isOrderSentToServer) {
+      this.scoopersSet = [];
     }
 
     this.entity.as(hz.TriggerGizmo).setWhoCanTrigger(this.scoopersSet);

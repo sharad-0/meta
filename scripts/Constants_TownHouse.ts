@@ -359,10 +359,10 @@ export const scoopItemCardConfig = (): itemButtonCard[] => {
   }));
 };
 export const colorHexCombination = [
-  { color: ColorCombinations.Orange, hex: "#e48205" },
-  { color: ColorCombinations.Pink, hex: "#ce6cb6" },
+  { color: ColorCombinations.Orange, hex: "#FFCC99" },
+  { color: ColorCombinations.Pink, hex: "#FF99CC" },
   { color: ColorCombinations.Blue, hex: "#99CCFF" },
-  { color: ColorCombinations.Green, hex: "#6ca784" },
+  { color: ColorCombinations.Green, hex: "#99FF99" },
 ];
 export const decorationConfig = [];
 export interface colorConfig {

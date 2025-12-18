@@ -25,6 +25,8 @@ import {
   SpawnController,
   PlayerVisibilityMode,
   Quaternion,
+  GrabbableEntity,
+  Handedness,
 } from "horizon/core";
 import {
   PlayerCashUpdatedEvent,
@@ -36,12 +38,14 @@ import {
 } from "Manager_Events";
 import {
   bagManager,
+  botManager,
   cashPoolManager,
   gameManager,
   hudManager,
   objectPoolManager,
   playerAnimations,
   propsManager,
+  utilityManager,
   vacuumController,
 } from "Managers_Instance";
 import { AvatarAIAgent } from "horizon/avatar_ai_agent";
@@ -51,8 +55,10 @@ import {
   Turbo,
   TurboEvents,
 } from "horizon/analytics";
-import { Npc } from "horizon/npc";
+import { Npc, NpcGrabActionResult } from "horizon/npc";
 import { Analytics, AnalyticsManager } from "AnalyticsManager";
+import BagPackAnimator from "BagPackAnimator";
+import Component_Bot from "Component_Bot";
 
 export type Serializable =
   | string
@@ -176,6 +182,10 @@ export default class Manager_Player extends Component<typeof Manager_Player> {
     vacuum3: { type: PropTypes.Entity },
     vacuum4: { type: PropTypes.Entity },
     vacuum5: { type: PropTypes.Entity },
+    vacuum6: { type: PropTypes.Entity },
+    vacuum7: { type: PropTypes.Entity },
+    vacuum8: { type: PropTypes.Entity },
+    vacuum9: { type: PropTypes.Entity },
     vacuumBot: { type: PropTypes.Entity },
     // loadingScreenAsset: { type: PropTypes.Asset },
   };
@@ -194,6 +204,10 @@ export default class Manager_Player extends Component<typeof Manager_Player> {
       this.props.vacuum3!,
       this.props.vacuum4!,
       this.props.vacuum5!,
+      this.props.vacuum6!,
+      this.props.vacuum7!,
+      this.props.vacuum8!,
+      this.props.vacuum9!,
     ].filter(Boolean); // Remove any undefined if props weren't set
   }
 
@@ -601,12 +615,8 @@ export default class Manager_Player extends Component<typeof Manager_Player> {
 
   /** True for real human players, false for NPCs & placeholders. */
   public isRealPlayer(p: Player): boolean {
-    const isBot = Npc.getGizmoFromPlayer(p) !== undefined;
-    if (isBot) {
-      return false;
-    } else {
-      return true;
-    }
+    const isBot = Npc.playerIsNpc(p);
+    return !isBot;
   }
 
   public isFtueUiRequired(player: Player): boolean {
@@ -671,6 +681,7 @@ export default class Manager_Player extends Component<typeof Manager_Player> {
     player.clearAvatarGripPoseOverride();
     playerAnimations?.stopAvatarAnimation(player);
     // Load any saved data ---------------------------------------------------
+
     const stored = this.loadStoredPlayerData(player);
     const storedHouseUpgrade = this.loadStoredHouseUpgrade(player);
     const ftueData = this.loadFTUEData(player);
@@ -809,6 +820,8 @@ export default class Manager_Player extends Component<typeof Manager_Player> {
   // Persistence helpers
   // -------------------------------------------------------------------------
   private loadStoredPlayerData(player: Player): PlayerPersistedData | null {
+    if (Npc.playerIsNpc(player)) return null;
+
     const storedJson = this.world.persistentStorage.getPlayerVariable(
       player,
       PV_KEY
@@ -828,6 +841,7 @@ export default class Manager_Player extends Component<typeof Manager_Player> {
   }
 
   private loadFTUEData(player: Player): ftueData | null {
+    if (Npc.playerIsNpc(player)) return null;
     const ftueJson = this.world.persistentStorage.getPlayerVariable(
       player,
       FTUE_KEY
@@ -840,6 +854,7 @@ export default class Manager_Player extends Component<typeof Manager_Player> {
   }
 
   private loadStoredHouseUpgrade(player: Player): PlayerHouseConfig | null {
+    if (Npc.playerIsNpc(player)) return null;
     const storedJson = this.world.persistentStorage.getPlayerVariable(
       player,
       HU_KEY
@@ -853,7 +868,6 @@ export default class Manager_Player extends Component<typeof Manager_Player> {
 
   private save(player: Player): void {
     if (Npc.playerIsNpc(player)) return;
-
     const rec = this.playersInWorld.get(player);
     if (!rec) return;
 
@@ -950,22 +964,19 @@ export default class Manager_Player extends Component<typeof Manager_Player> {
   public equipVacuumForFetcher(player: Player, role: Role): void {
     const vacuums = this.vacuumEntities;
     if (vacuums.length === 0) return; // props not wired
-
+    if (Npc.playerIsNpc(player)) return;
     if (role === PlayerRoles.Fetcher) {
       if (this._vacuumByPlayer.has(player)) return;
 
       // Find an available vacuum
       let freeVacuum = this._findFreeVacuum(...vacuums);
-      if (Npc.playerIsNpc(player)) {
-        freeVacuum = this.props.vacuumBot;
-      }
-      if (!freeVacuum) return; // All in use - show a warning if desired
 
-      freeVacuum.scale.set(new Vec3(1, 1, 1));
+      if (!freeVacuum) return; // All in use - show a warning if desired
       freeVacuum.visible.set(true);
-      freeVacuum
-        .as(AttachableEntity)
-        .attachToPlayer(player, AttachablePlayerAnchor.Torso);
+      freeVacuum.as(GrabbableEntity).forceHold(player, Handedness.Right, false);
+      freeVacuum.as(GrabbableEntity).setWhoCanGrab([]);
+      freeVacuum.getComponents(BagPackAnimator)[0].setPlayer(player);
+      // freeVacuum.simulated.set(false);
       this._vacuumByPlayer.set(player, freeVacuum);
       bagManager?.assignBagEntityToPlayer(player);
       // if (!gameManager?.isThisTrainingSession()) {
@@ -980,6 +991,99 @@ export default class Manager_Player extends Component<typeof Manager_Player> {
 
     this.removeVacuumForFetcher(player);
   }
+
+  async equipVacuumForBot(player: Player): Promise<boolean> {
+    if (!Npc.playerIsNpc(player)) {
+      return false;
+    }
+
+    const freeVacuum = this.props.vacuumBot;
+    if (!freeVacuum) {
+      console.warn("[VacuumEquip] No vacuum available");
+      return false;
+    }
+
+    try {
+      // Configure vacuum for this bot
+      const grabbable = freeVacuum.as(GrabbableEntity);
+      grabbable.setWhoCanGrab([player]);
+      const botComponent = botManager?.getBotComponentFromRole(PlayerRoles.Fetcher);
+      if (!botComponent) {
+        console.error("[VacuumEquip] No bot component found");
+        return false;
+      }
+      // Attempt grab with configurable retries + timeout
+      const result = await this.attemptBotGrab(
+        botComponent,
+        freeVacuum,
+        { maxRetries: 3, retryDelayMs: 1500, timeoutMs: 10000 }
+      );
+
+      if (result.success) {
+        this.completeVacuumEquip(freeVacuum, player);
+        return true;
+      }
+
+      console.error(`[VacuumEquip] Failed after ${result.attempt} attempts: ${result.lastError}`);
+      return false;
+
+    } catch (error) {
+      console.error("[VacuumEquip] Exception during equip:", error);
+      // Cleanup partial state
+      freeVacuum.as(GrabbableEntity)?.setWhoCanGrab([]);
+      return false;
+    }
+  }
+
+  private async attemptBotGrab(
+    botComponent: Component_Bot,
+    vacuum: Entity,
+    options: { maxRetries: number; retryDelayMs: number; timeoutMs: number }
+  ): Promise<{ success: boolean; attempt: number; lastError?: string }> {
+    if (!botComponent) {
+      return { success: false, attempt: 0, lastError: "No bot component" };
+    }
+
+    for (let attempt = 1; attempt <= options.maxRetries; attempt++) {
+      try {
+        console.log(`[VacuumEquip] Grab attempt ${attempt}/${options.maxRetries}`);
+
+        const result = await botComponent.grabObject(vacuum);
+
+        if (result === NpcGrabActionResult.Success) {
+          return { success: true, attempt };
+        }
+
+        // Wait before retry (progressive backoff)
+        if (attempt < options.maxRetries) {
+          await utilityManager?.sleep(options.retryDelayMs * attempt);
+        }
+
+      } catch (error) {
+        console.warn(`[VacuumEquip] Attempt ${attempt} failed:`, error);
+      }
+    }
+
+    return {
+      success: false,
+      attempt: options.maxRetries,
+      lastError: "Max retries exceeded"
+    };
+  }
+
+  private completeVacuumEquip(vacuum: Entity, player: Player): void {
+    // Extract first BagPackAnimator safely
+    const animators = vacuum.getComponents(BagPackAnimator);
+    if (animators.length > 0) {
+      animators[0].setPlayer(player);
+    }
+    vacuum.visible.set(true);
+    this._vacuumByPlayer.set(player, vacuum);
+    bagManager?.assignBagEntityToPlayer(player);
+
+    console.log(`[VacuumEquip] Successfully equipped vacuum for bot ${player.name}`);
+  }
+
 
   public getVacuumEntityByPlayer(player: Player): Entity | undefined {
     return this._vacuumByPlayer.get(player);
@@ -996,14 +1100,14 @@ export default class Manager_Player extends Component<typeof Manager_Player> {
     const ownedVacuum = this._vacuumByPlayer.get(player);
     if (!ownedVacuum) return; // nothing to clean up
 
-    ownedVacuum.as(AttachableEntity).detach();
+    ownedVacuum.as(GrabbableEntity).forceRelease();
     ownedVacuum.visible.set(false);
     ownedVacuum.position.set(new Vec3(-1000, -1000, -1000)); // reset to origin if desired
 
     hudManager?.hideFetcherButtonUiFromPlayer(player);
     bagManager?.removeBagEntityFromPlayer(player);
     this._vacuumByPlayer.delete(player);
-    playerAnimations?.stopAvatarAnimation(player);
+    // playerAnimations?.stopAvatarAnimation(player);
   }
 
   private _findFreeVacuum(...vacuums: Entity[]): Entity | undefined {
@@ -1072,7 +1176,6 @@ export default class Manager_Player extends Component<typeof Manager_Player> {
     score: number,
     allRounderScore: number
   ) {
-    if (Npc.playerIsNpc(player)) return;
     this.world.leaderboards.setScoreForPlayer(
       leaderBoardName,
       player,
@@ -1093,8 +1196,6 @@ export default class Manager_Player extends Component<typeof Manager_Player> {
     scooperActions: number,
     serverActions: number
   ) {
-    if (Npc.playerIsNpc(player)) return;
-
     const allRounderScore = fetcherActions + scooperActions + serverActions;
     this.world.leaderboards.setScoreForPlayer(
       LeaderBoardNames.TopFetchers,

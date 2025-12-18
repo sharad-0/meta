@@ -50,7 +50,7 @@ export default class CustomControls extends Component<typeof CustomControls> {
       const player = this.entity.owner.get();
       this.player = player;
       this.playerOrignalSpeed = player.locomotionSpeed.get();
-
+      this.player.jumpSpeed.set(0);
       // if (player.deviceType.get() === PlayerDeviceType.Mobile) {
       PlayerControls.disableSystemControls(true);
       // }
@@ -134,15 +134,27 @@ export default class CustomControls extends Component<typeof CustomControls> {
         this.isRushHourRunning = false;
         this.resetPlayerSpeed();
       });
+
+      this.entity.owner.get().jumpSpeed.set(0);
     }
   }
 
   enableFetcherControls() {
-    this.MOUSECLICK = PlayerControls.connectLocalInput(
-      PlayerInputAction.RightGrip,
-      ButtonIcon.Fire,
-      this
-    );
+    const deviceType = this.player?.deviceType.get();
+    if (deviceType === PlayerDeviceType.VR) {
+      this.MOUSECLICK = PlayerControls.connectLocalInput(
+        PlayerInputAction.RightTrigger,
+        ButtonIcon.Fire,
+        this
+      );
+    } else {
+      this.MOUSECLICK = PlayerControls.connectLocalInput(
+        PlayerInputAction.RightGrip,
+        ButtonIcon.Fire,
+        this
+      );
+    }
+
     this.MOUSECLICK.registerCallback((_, pressed) => {
       if (pressed) {
         this.executeButtonPress();

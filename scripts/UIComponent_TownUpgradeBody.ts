@@ -368,6 +368,9 @@ function unlocScoopButton(
                 fontFamily: "Bangers",
                 textAlign: "center",
                 alignSelf: "center",
+                fontSize: 14,
+                width: "100%"
+
               },
             }),
           ],
@@ -379,13 +382,13 @@ function unlocScoopButton(
             aspectRatio: cfg.buyButtonAsset.aspectRatio,
             position: "absolute",
             bottom: "6%",
-            // backgroundColor: "#A0FF97",
+            // backgroundColor: "#0c2ff7ff",
             flexDirection: "row",
             justifyContent: "space-around",
             alignItems: "center",
             borderBottomLeftRadius: 15,
             borderBottomRightRadius: 15,
-            paddingHorizontal: "20%",
+            paddingHorizontal: "5%",
           },
           children: [
             Image({
@@ -408,13 +411,15 @@ function unlocScoopButton(
                 fontFamily: "Bangers",
                 textAlign: "center",
                 alignSelf: "center",
-                marginLeft: 5,
+                marginLeft: 2,
+                width: "50%"
+                // backgroundColor: "#c4650dff",
               },
             }),
           ],
         })
       ),
-      
+
     ],
   });
 }
@@ -560,6 +565,8 @@ function unlockedWaffleButton(
                   fontFamily: "Bangers",
                   textAlign: "center",
                   alignSelf: "center",
+                  fontSize: 14,
+                  width: "100%"
                 },
               }),
             ],
@@ -577,7 +584,7 @@ function unlockedWaffleButton(
               alignItems: "center",
               borderBottomLeftRadius: 15,
               borderBottomRightRadius: 15,
-              paddingHorizontal: "20%",
+              paddingHorizontal: "5%",
             },
             children: [
               Image({
@@ -600,7 +607,9 @@ function unlockedWaffleButton(
                   fontFamily: "Bangers",
                   textAlign: "center",
                   alignSelf: "center",
-                  marginLeft: 5,
+                  marginLeft: 2,
+                  width: "50%"
+
                 },
               }),
             ],

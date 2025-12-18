@@ -1,5 +1,5 @@
 import { TextureAsset } from "horizon/2p";
-import { Asset, Player, PlayerDeviceType, PropTypes } from "horizon/core";
+import { Asset, Player, PlayerDeviceType, PlayerVisibilityMode, PropTypes } from "horizon/core";
 import {
   Binding,
   Image,
@@ -29,19 +29,19 @@ export default class ButtonControl_Fetcher extends UIComponent<
   private stateVsAssets: {
     [key: string]: { desktop: TextureAsset; mobile: TextureAsset };
   } = {
-    disabled: {
-      desktop: new Asset(BigInt("1997489391063863")) as TextureAsset,
-      mobile: new Asset(BigInt("666446276510964")) as TextureAsset,
-    },
-    active: {
-      desktop: new Asset(BigInt("24588410624163801")) as TextureAsset,
-      mobile: new Asset(BigInt("1184097653646624")) as TextureAsset,
-    },
-    inactive: {
-      desktop: new Asset(BigInt("1120048473567259")) as TextureAsset,
-      mobile: new Asset(BigInt("3820133981464679")) as TextureAsset,
-    },
-  };
+      disabled: {
+        desktop: new Asset(BigInt("1997489391063863")) as TextureAsset,
+        mobile: new Asset(BigInt("666446276510964")) as TextureAsset,
+      },
+      active: {
+        desktop: new Asset(BigInt("24588410624163801")) as TextureAsset,
+        mobile: new Asset(BigInt("1184097653646624")) as TextureAsset,
+      },
+      inactive: {
+        desktop: new Asset(BigInt("1120048473567259")) as TextureAsset,
+        mobile: new Asset(BigInt("3820133981464679")) as TextureAsset,
+      },
+    };
   initializeUI(): UINode {
     return View({
       children: Pressable({
@@ -95,7 +95,7 @@ export default class ButtonControl_Fetcher extends UIComponent<
     }, 100);
   }
 
-  start() {}
+  start() { }
 
   public setPlayerAndDevice(player: Player) {
     if (player) {
@@ -112,7 +112,7 @@ export default class ButtonControl_Fetcher extends UIComponent<
       this.imageSourceBinding.set(
         ImageSource.fromTextureAsset(this.stateVsAssets.disabled.desktop)
       );
-    } else {
+    } else if (this.deviceType === PlayerDeviceType.Mobile) {
       this.imageSourceBinding.set(
         ImageSource.fromTextureAsset(this.stateVsAssets.disabled.mobile)
       );

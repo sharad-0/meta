@@ -6,6 +6,7 @@ import { TableData } from "Enums_Game";
 import {
   iceCreamDelivered,
   messCleanedAtTable,
+  OnPlayerDropItem,
   onPlayerTrashedItem,
   onServerTrashedItem,
   playerPickedItem,
@@ -113,10 +114,16 @@ class Component_Table extends hz.Component<typeof Component_Table> {
     );
 
     this.connectLocalBroadcastEvent(ResetTrayForOrder, (data) => {
-      if (data.trayId && data.trayId == this.props.tableId) {
+      if (data.trayId && data.trayId == this.props.tableId && data.player) {
         this.removeDeliveryTableStation(data.player, data.trayId);
       }
-    })
+    });
+
+    this.connectLocalBroadcastEvent(OnPlayerDropItem, (data) => {
+      if (data.trayId && data.trayId == this.props.tableId && data.player) {
+        this.removeDeliveryTableStation(data.player, data.trayId);
+      }
+    });
 
     this.connectLocalBroadcastEvent(iceCreamDelivered, () => {
       this.setCashierIndicatorVisibility(false);

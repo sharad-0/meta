@@ -1,12 +1,14 @@
 import * as hz from "horizon/core";
+import { Player } from "horizon/core";
 import { AssetBundleGizmo } from "horizon/unity_asset_bundles";
+import HUD_Fetcher from "HUD_Fetcher";
 import { hudManager } from "Managers_Instance";
 
 export default class BagPackAnimator extends hz.Component<
   typeof BagPackAnimator
 > {
   static propsDefinition = {
-    vacuumBagEntity: {
+    vacuumGunEntity: {
       type: hz.PropTypes.Entity,
       required: true,
     },
@@ -25,21 +27,39 @@ export default class BagPackAnimator extends hz.Component<
     vacuumSound: { type: hz.PropTypes.Entity, required: false },
     bagFullSound: { type: hz.PropTypes.Entity, required: false },
     collectSound: { type: hz.PropTypes.Entity, required: false },
+    fetcherHud: { type: hz.PropTypes.Entity, required: false },
+    strip1: { type: hz.PropTypes.Entity, required: false },
+    strip2: { type: hz.PropTypes.Entity, required: false },
+    strip3: { type: hz.PropTypes.Entity, required: false },
+    strip4: { type: hz.PropTypes.Entity, required: false },
+    strip5: { type: hz.PropTypes.Entity, required: false },
   };
 
   public isVacuumActive: boolean = false;
+  public fetcherHudComponent: HUD_Fetcher | undefined;
   start() {
     this.props.particleEffect?.as(hz.ParticleGizmo).visible.set(false);
     this.props.particleEffect?.as(hz.ParticleGizmo).stop();
-    // this.connectNetworkBroadcastEvent(
-    //   ToggleFetcherVacuum,
-    //   ({ fetcherPlayer, toggle }) => {
-    //     // console.log.*$
-    //     if (this.entity.owner.get().id === fetcherPlayer?.id) {
-    //       this.vacuumOut(toggle!);
-    //     }
-    //   }
-    // );
+    if (this.props.fetcherHud) {
+      this.fetcherHudComponent = this.props.fetcherHud.getComponents(HUD_Fetcher)[0];
+    }
+
+    // this.async.setTimeout(() => {
+    //   this.animateGunForItems(5);
+    //   this.vacuumOut(true);
+    //   this.async.setTimeout(() => {
+    //     this.vacuumOut(false);
+    //     this.animateGunForItems(3);
+    //   }, 2000);
+    // }, 500);
+  }
+
+  public setPlayer(player: Player | undefined) {
+    if (!this.fetcherHudComponent && this.props.fetcherHud) {
+      this.fetcherHudComponent = this.props.fetcherHud.getComponents(HUD_Fetcher)[0];
+    }
+
+    this.fetcherHudComponent?.setPlayer(player);
   }
 
   public playCollectSound() {
@@ -51,14 +71,14 @@ export default class BagPackAnimator extends hz.Component<
     //   this.props.collider?.collidable.set(condition);
     // }, 500);
     // Get the AssetBundleGizmo from this entity.
-    const bagAsset = this.props.vacuumBagEntity!.as(AssetBundleGizmo);
+    const bagAsset = this.props.vacuumGunEntity!.as(AssetBundleGizmo);
     // const pipeAsset = this.props.vacuumPipeEntity!.as(AssetBundleGizmo);
     // Get the root instance to control animation parameters.
     const bagRoot = bagAsset?.getRoot();
-    // const pipeRoot = pipeAsset?.getRoot();
-    // console.log.*$
+    // // const pipeRoot = pipeAsset?.getRoot();
+    // // console.log.*$
     if (bagRoot) {
-      bagRoot.setAnimationParameterBool("Vaccum_throw", condition);
+      bagRoot.setAnimationParameterBool("fetcher", condition);
     }
 
     if (condition) {
@@ -89,32 +109,48 @@ export default class BagPackAnimator extends hz.Component<
   }
 
   public vacuumThrow(condition: boolean) {
-    // this.async.setTimeout(() => {
-    //   this.props.collider?.collidable.set(condition);
-    // }, 500);
-    // Get the AssetBundleGizmo from this entity.
-    const bagAsset = this.props.vacuumBagEntity!.as(AssetBundleGizmo);
-    // const pipeAsset = this.props.vacuumPipeEntity!.as(AssetBundleGizmo);
-    // Get the root instance to control animation parameters.
-    const bagRoot = bagAsset?.getRoot();
-    // const pipeRoot = pipeAsset?.getRoot();
 
-    if (bagRoot) {
-      bagRoot.setAnimationParameterBool("Vaccum_deposit", condition);
-    }
-    // if (pipeRoot) {
-    //   pipeRoot.setAnimationParameterBool("pipe_out", condition);
+    // const bagAsset = this.props.vacuumGunEntity!.as(AssetBundleGizmo);
+    // const bagRoot = bagAsset?.getRoot();
+    // if (bagRoot) {
+    //   bagRoot.setAnimationParameterBool("deposite", condition);
+
     // }
-
-    // this.props.vacuumGunEntity?.visible.set(condition);
-    // this.props.particleEffect?.as(hz.ParticleGizmo).visible.set(condition);
-    // if (condition) {
-    //   this.async.setTimeout(() => {
-    //     this.props.particleEffect?.as(hz.ParticleGizmo).play();
+    // if (!condition) {
+    //   const timeout = this.async.setTimeout(() => {
+    //     bagRoot.resetAnimationParameterTrigger("deposite", false);
+    //     this.async.clearTimeout(timeout);
     //   }, 2000);
-    // } else {
-    //   this.props.particleEffect?.as(hz.ParticleGizmo).stop();
     // }
+
+  }
+
+  public animateGunForItems(itemCount: number) {
+    const strip1 = this.props.strip1!.as(AssetBundleGizmo);
+    const strip2 = this.props.strip2!.as(AssetBundleGizmo);
+    const strip3 = this.props.strip3!.as(AssetBundleGizmo);
+    const strip4 = this.props.strip4!.as(AssetBundleGizmo);
+    const strip5 = this.props.strip5!.as(AssetBundleGizmo);
+    const stripRoot1 = strip1?.getRoot();
+    const stripRoot2 = strip2?.getRoot();
+    const stripRoot3 = strip3?.getRoot();
+    const stripRoot4 = strip4?.getRoot();
+    const stripRoot5 = strip5?.getRoot();
+    if (stripRoot1) {
+      stripRoot1.setAnimationParameterBool("strip1", itemCount > 0);
+    }
+    if (stripRoot2) {
+      stripRoot2.setAnimationParameterBool("strip2", itemCount > 1);
+    }
+    if (stripRoot3) {
+      stripRoot3.setAnimationParameterBool("strip3", itemCount > 2);
+    }
+    if (stripRoot4) {
+      stripRoot4.setAnimationParameterBool("strip4", itemCount > 3);
+    }
+    if (stripRoot5) {
+      stripRoot5.setAnimationParameterBool("strip5", itemCount > 4);
+    }
   }
 }
 hz.Component.register(BagPackAnimator);

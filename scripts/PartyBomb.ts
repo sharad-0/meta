@@ -257,6 +257,8 @@ class Component_Snowball extends hz.Component<typeof Component_Snowball> {
   private isSfxPlaying: boolean = false;
   private pickingAnimAsset: hz.Asset | null = null;
   private playersInZone: Player[] = [];
+  private throwIntentActive: boolean = false;
+
   // Debug logging helper
   private debug(message: string): void {
     if (this.props.debugMode) {
@@ -609,6 +611,7 @@ class Component_Snowball extends hz.Component<typeof Component_Snowball> {
   private onGrabStart(isRightHand: boolean, player: hz.Player) {
     // Transition to HELD state
     // this.playePickUpAnimation(player);
+    this.throwIntentActive = false; // Reset when grabbing
     this._holderId = player.id;
     this.entity.owner.set(player);
     this._lastHand = isRightHand ? hz.Handedness.Right : hz.Handedness.Left;
@@ -664,18 +667,80 @@ class Component_Snowball extends hz.Component<typeof Component_Snowball> {
       } catch { }
       this._localThrowInput = undefined;
     }
+    // this.captureThrowDirection(player);
 
-    // Always classify as thrown
-    this._pendingImpulse = true;
-    if (this._currentState !== BombState.ARMED)
-      this.transitionTo(BombState.ARMED);
+    if (this.throwIntentActive) {
+      this._pendingImpulse = true;
+      if (this._currentState !== BombState.ARMED) {
+        this.transitionTo(BombState.ARMED);
+      }
+      // Apply forced impulse for intentional throws
+      this.async.setTimeout(() => this.applyImpulseIfNeeded(true), 20);
 
-    // Guaranteed kick shortly after release
-    this.async.setTimeout(() => this.applyImpulseIfNeeded(true), 20);
+      this.throwIntentActive = false; // Reset flag
+
+    } else {
+      this.captureThrowDirection(player);
+      this.async.setTimeout(() => this.applyImpulseIfNeeded(true), 20);
+
+      // this.entity.as(hz.GrabbableEntity)?.setWhoCanGrab([]);
+      // Natural release - just drop with minimal physics
+      this.transitionTo(BombState.IDLE); // Return to idle instead of armed
+      this.fallbackTimer = this.async.setTimeout(() => {
+        this.debug("Natural drop respawn triggered");
+        this.respawnBomb();
+      }, 1000);
+    }
+
     this.sendNetworkBroadcastEvent(PlayerDroppedSnowball, {
       player: player,
     });
     // player.stopAvatarAnimation();
+  }
+  private captureThrowDirection(player: hz.Player): void {
+    let aimDir: hz.Vec3 | null = null;
+
+    try {
+      // Try to get camera forward direction (works in VR)
+      const cam = LocalCamera;
+      if (cam) {
+        const camForward = cam.forward?.get();
+        if (camForward && camForward.magnitude() > 0.001) {
+          aimDir = camForward.normalize();
+          this.debug(`Captured camera forward: (${aimDir.x.toFixed(2)}, ${aimDir.y.toFixed(2)}, ${aimDir.z.toFixed(2)})`);
+        } else {
+          // Fallback: calculate from camera position and lookAt
+          const lookAt = cam.lookAtPosition?.get();
+          const camPos = cam.position?.get();
+          if (lookAt && camPos) {
+            const v = lookAt.sub(camPos);
+            if (v.magnitude() > 0.001) {
+              aimDir = v.normalize();
+              this.debug(`Captured camera lookAt: (${aimDir.x.toFixed(2)}, ${aimDir.y.toFixed(2)}, ${aimDir.z.toFixed(2)})`);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      this.debug(`Camera direction capture failed: ${(e as Error).message}`);
+    }
+
+    // Final fallback: use player forward
+    if (!aimDir) {
+      const f = player.forward.get();
+      aimDir = f ? f.normalize() : new hz.Vec3(0, 0, 1);
+      this.debug(`Using player forward fallback: (${aimDir.x.toFixed(2)}, ${aimDir.y.toFixed(2)}, ${aimDir.z.toFixed(2)})`);
+    }
+
+    // Add upward bias for throwing arc
+    const upBias = (this.props.upwardBias as number) ?? 0.1;
+    this._lastAimDir = aimDir.add(new hz.Vec3(0, upBias, 0)).normalize();
+    this._lastThrowDir = this._lastAimDir;
+    this._lastThrowOrigin = this.entity.position.get();
+    this._throwerPosition = player.position.get();
+    this._throwerId = player.id;
+
+    this.debug(`Final throw direction: (${this._lastAimDir.x.toFixed(2)}, ${this._lastAimDir.y.toFixed(2)}, ${this._lastAimDir.z.toFixed(2)})`);
   }
 
   private onPrimaryActionDown(player: hz.Player) {
@@ -689,6 +754,8 @@ class Component_Snowball extends hz.Component<typeof Component_Snowball> {
       return;
     }
     this.debug("[Component_Snowball] Primary action down -> throw");
+    this.throwIntentActive = true; // Mark throw intent
+
     this.tryThrow(local);
   }
 
@@ -701,17 +768,34 @@ class Component_Snowball extends hz.Component<typeof Component_Snowball> {
     // this._throwCooldownUntil = now + 250;
 
     this._pendingImpulse = true;
+    this.throwIntentActive = true; // Confirm throw intent
 
     // Capture aim
     let aimDir: hz.Vec3 | null = null;
     try {
-      const lookAt = LocalCamera ? LocalCamera.lookAtPosition.get() : null;
-      const myPos = this.entity.position.get();
-      if (lookAt) {
-        const v = lookAt.sub(myPos);
-        if (v.magnitude() > 0.001) aimDir = v.normalize();
+      // Try to get camera forward direction (works in VR)
+      const cam = LocalCamera;
+      if (cam) {
+        const camForward = cam.forward?.get();
+        if (camForward && camForward.magnitude() > 0.001) {
+          aimDir = camForward.normalize();
+          this.debug(`Using camera forward: ${aimDir.x.toFixed(2)}, ${aimDir.y.toFixed(2)}, ${aimDir.z.toFixed(2)}`);
+        } else {
+          // Fallback: calculate from camera position and lookAt
+          const lookAt = cam.lookAtPosition?.get();
+          const camPos = cam.position?.get();
+          if (lookAt && camPos) {
+            const v = lookAt.sub(camPos);
+            if (v.magnitude() > 0.001) {
+              aimDir = v.normalize();
+              this.debug(`Using camera lookAt: ${aimDir.x.toFixed(2)}, ${aimDir.y.toFixed(2)}, ${aimDir.z.toFixed(2)}`);
+            }
+          }
+        }
       }
-    } catch { }
+    } catch (e) {
+      this.debug(`Camera direction failed: ${(e as Error).message}`);
+    }
     if (!aimDir) {
       const f = local.forward.get();
       aimDir = f ? f.normalize() : new hz.Vec3(0, 0, 1);

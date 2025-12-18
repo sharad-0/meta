@@ -17,9 +17,9 @@ export const ROLE_CONFIG: RoleEntry[] = [
  * Adjust these numbers to balance your game.
  */
 export const ROLE_MAX_PLAYERS: Record<Role, number> = {
-  Fetcher: 5,
-  Scooper: 5,
-  Server: 5,
+  Fetcher: 9,
+  Scooper: 9,
+  Server: 9,
 };
 
 export const ButtonStates = {

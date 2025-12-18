@@ -23,9 +23,13 @@ import {
   objectPoolManager,
   propsManager,
   hapticsManager,
+  vacuumController,
 } from "Managers_Instance";
 import { Color, Vec3 } from "horizon/core";
 import { ROLE_MAX_PLAYERS } from "Constants_SwitchRoleConfig";
+import { PlayerCameraEvents } from "PlayerCamera";
+import { CameraMode } from "horizon/camera";
+import { Npc } from "horizon/npc";
 
 export default class Trigger_SwitchRoleAuto extends Component<
   typeof Trigger_SwitchRoleAuto
@@ -99,8 +103,8 @@ export default class Trigger_SwitchRoleAuto extends Component<
         scooperHandManager?.destroyItemAsset(player);
         break;
       case PlayerRoles.Server:
-        serverManager?.resetConePosition(player);
-        serverManager?.onPlayerExitWorld(player); // Reset any server-specific state
+        // serverManager?.resetConePosition(player);
+        serverManager?.onPlayerExitWorld(player, true); // Reset any server-specific state
         break;
       case PlayerRoles.Fetcher:
         bagManager?.dumpAllItems(player);
@@ -118,6 +122,9 @@ export default class Trigger_SwitchRoleAuto extends Component<
     //   fontSize: 3.5,
     //   backgroundColor: Color.fromHex("#5ef55e"),
     // });
+    if (!Npc.playerIsNpc(player)) {
+      vacuumController?.DeactivateFetcherControls(player);
+    }
     switch (role) {
       case PlayerRoles.Scooper:
         hudManager?.showPopupNotifToPlayer(
@@ -134,6 +141,9 @@ export default class Trigger_SwitchRoleAuto extends Component<
         );
         break;
       case PlayerRoles.Fetcher:
+        if (!Npc.playerIsNpc(player)) {
+          vacuumController?.ActivateFetcherControls(player);
+        }
         hudManager?.showPopupNotifToPlayer(
           NotificationTypes.FetcherRoleSelected,
           player,

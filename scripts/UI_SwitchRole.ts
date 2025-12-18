@@ -157,34 +157,34 @@ export default class UI_SwitchRole extends UIComponent<typeof UI_SwitchRole> {
       count: Binding<string>;
     }
   > = {
-      Fetcher: {
-        roleText: this.fetcherRoleTextBinding,
-        imageOp: this.fetcherImageOpacityBinding,
-        btnBg: this.fetcherButtonImageColorBinding,
-        btnLabel: this.fetcherBtnTextBinding,
-        btnLabelCl: this.fetcherBtnTextColorBinding,
-        cardBg: this.fetcherCardBgColorBinding,
-        count: this.fetcherRoleCountBinding,
-      },
-      Scooper: {
-        roleText: this.scooperRoleTextBinding,
-        imageOp: this.scooperImageOpacityBinding,
-        btnBg: this.scooperButtonImageColorBinding,
-        btnLabel: this.scooperBtnTextBinding,
-        btnLabelCl: this.scooperBtnTextColorBinding,
-        cardBg: this.scooperCardBgColorBinding,
-        count: this.scooperRoleCountBinding,
-      },
-      Server: {
-        roleText: this.serverRoleTextBinding,
-        imageOp: this.serverImageOpacityBinding,
-        btnBg: this.serverButtonImageColorBinding,
-        btnLabel: this.serverBtnTextBinding,
-        btnLabelCl: this.serverBtnTextColorBinding,
-        cardBg: this.serverCardBgColorBinding,
-        count: this.serverRoleCountBinding,
-      },
-    };
+    Fetcher: {
+      roleText: this.fetcherRoleTextBinding,
+      imageOp: this.fetcherImageOpacityBinding,
+      btnBg: this.fetcherButtonImageColorBinding,
+      btnLabel: this.fetcherBtnTextBinding,
+      btnLabelCl: this.fetcherBtnTextColorBinding,
+      cardBg: this.fetcherCardBgColorBinding,
+      count: this.fetcherRoleCountBinding,
+    },
+    Scooper: {
+      roleText: this.scooperRoleTextBinding,
+      imageOp: this.scooperImageOpacityBinding,
+      btnBg: this.scooperButtonImageColorBinding,
+      btnLabel: this.scooperBtnTextBinding,
+      btnLabelCl: this.scooperBtnTextColorBinding,
+      cardBg: this.scooperCardBgColorBinding,
+      count: this.scooperRoleCountBinding,
+    },
+    Server: {
+      roleText: this.serverRoleTextBinding,
+      imageOp: this.serverImageOpacityBinding,
+      btnBg: this.serverButtonImageColorBinding,
+      btnLabel: this.serverBtnTextBinding,
+      btnLabelCl: this.serverBtnTextColorBinding,
+      cardBg: this.serverCardBgColorBinding,
+      count: this.serverRoleCountBinding,
+    },
+  };
 
   private fetcherSpawnPoint?: Entity;
   private serverSpawnPoint?: Entity;
@@ -531,7 +531,7 @@ export default class UI_SwitchRole extends UIComponent<typeof UI_SwitchRole> {
   public updateRole(player: Player, role: PlayerRoles): void {
     switch (playerManager?.getRole(player)) {
       case PlayerRoles.Scooper:
-        scooperHandManager?.destroyItemAsset(player);
+        scooperHandManager?.emptyHand(player, true);
         break;
       case PlayerRoles.Server:
         serverManager?.resetConePosition(player);

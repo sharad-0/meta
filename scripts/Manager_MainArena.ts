@@ -20,6 +20,7 @@ import Manager_Town from "Manager_Town";
 import Managers_Instance, {
   cashierUIManager,
   cashPoolManager,
+  coneMachineHandler,
   hudManager,
   inventoryManager,
   navMeshManager,
@@ -404,6 +405,7 @@ export default class Manager_MainArena extends hz.Component<
         await this.world.deleteAsset(cone, true);
       }
     });
+    coneMachineHandler?.ResetConeMachine();
   }
 }
 hz.Component.register(Manager_MainArena);
