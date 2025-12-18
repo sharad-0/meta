@@ -1257,6 +1257,7 @@ export default class UI_TownUpgrade extends UIComponent<typeof UI_TownUpgrade> {
       index,
       deductCoins
     );
+    this.onClosePressed?.();
 
   }
 }

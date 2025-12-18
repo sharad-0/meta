@@ -171,7 +171,9 @@ export default class CustomControls extends Component<typeof CustomControls> {
 
   disableFetcherControls() {
     this.isVacuumActive = false;
-    this.MOUSECLICK!.disconnect();
+    if (this.MOUSECLICK) {
+      this.MOUSECLICK!.disconnect();
+    }
   }
 
   enableSnowfightControls() {

@@ -307,7 +307,6 @@ export default class Trigger_Scooper_Tray extends hz.Component<
       if (themeSessionManager?.isChristmasSessionActive()) {
         iceCreamInHand.setAddonToScoop();
       }
-
     } else {
       console.warn(`[Trigger_Scooper_DropOrder] Cone movement failed`);
     }

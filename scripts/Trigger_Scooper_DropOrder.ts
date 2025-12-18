@@ -124,7 +124,7 @@ class Trigger_Scooper_DropOrder extends hz.Component<
     }
     iceCreamInHand.entity.position.set(
       utilityManager?.getRandomPointInEntityBounds(this.entity) ??
-        new hz.Vec3(0, 0, 0)
+      new hz.Vec3(0, 0, 0)
     );
 
     serverManager?.addNewConeToTable(iceCreamInHand);

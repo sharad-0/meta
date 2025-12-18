@@ -82,7 +82,7 @@ export default class Trigger_ScooperInteraction extends Component<
     this.scoopSound = this.world.getEntitiesWithTags([tag])[0]?.as(AudioGizmo);
   }
 
-  Start() { }
+  Start() {}
 
   onDestroy(): void {
     this.offInv?.disconnect();
@@ -190,7 +190,12 @@ export default class Trigger_ScooperInteraction extends Component<
 
     scoopers = playerManager?.getRolePlayers(PlayerRoles.Scooper) ?? [];
     if (item === Items.Cone) {
-      scoopers.filter((p) => p.isValidReference && !Npc.playerIsNpc(p) && p.deviceType.get() === hz.PlayerDeviceType.VR);
+      scoopers.filter(
+        (p) =>
+          p.isValidReference &&
+          !Npc.playerIsNpc(p) &&
+          p.deviceType.get() === hz.PlayerDeviceType.VR
+      );
     }
 
     this.triggerGizmo?.setWhoCanTrigger(scoopers);

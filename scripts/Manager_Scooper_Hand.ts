@@ -176,7 +176,7 @@ export default class Manager_Scooper_Hand extends hz.Component<
     }
     try {
       player.clearAvatarGripPoseOverride();
-    } catch { }
+    } catch {}
     this.sendLocalBroadcastEvent(removePlayersFromUseTrash, { player });
   }
 
@@ -210,7 +210,7 @@ export default class Manager_Scooper_Hand extends hz.Component<
 
     try {
       player.clearAvatarGripPoseOverride();
-    } catch { }
+    } catch {}
     this.sendLocalBroadcastEvent(removePlayersFromUseTrash, { player });
   }
 

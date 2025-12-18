@@ -18,7 +18,7 @@ const PANEL_H = "18%";
 const SLOT_COUNT = 5;
 const VR_ICON_SIZE = 15;
 const NON_VR_ICON_SIZE = 25; // Double the VR size
-export default class HUD_Fetcher extends UIComponent<typeof HUD_Fetcher> {
+export default class HUD_FetcherVacuum extends UIComponent<typeof HUD_FetcherVacuum> {
   static propsDefinition = {
     item1Icon: { type: PropTypes.Asset },
     item2Icon: { type: PropTypes.Asset },
@@ -234,4 +234,4 @@ export default class HUD_Fetcher extends UIComponent<typeof HUD_Fetcher> {
   }
 }
 
-UIComponent.register(HUD_Fetcher);
+UIComponent.register(HUD_FetcherVacuum);

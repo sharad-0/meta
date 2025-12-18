@@ -1,7 +1,7 @@
 import * as hz from "horizon/core";
 import { Player } from "horizon/core";
 import { AssetBundleGizmo } from "horizon/unity_asset_bundles";
-import HUD_Fetcher from "HUD_Fetcher";
+import HUD_FetcherVacuum from "Hud_FetcherVacuum";
 import { hudManager } from "Managers_Instance";
 
 export default class BagPackAnimator extends hz.Component<
@@ -36,12 +36,12 @@ export default class BagPackAnimator extends hz.Component<
   };
 
   public isVacuumActive: boolean = false;
-  public fetcherHudComponent: HUD_Fetcher | undefined;
+  public fetcherHudComponent: HUD_FetcherVacuum | undefined;
   start() {
     this.props.particleEffect?.as(hz.ParticleGizmo).visible.set(false);
     this.props.particleEffect?.as(hz.ParticleGizmo).stop();
     if (this.props.fetcherHud) {
-      this.fetcherHudComponent = this.props.fetcherHud.getComponents(HUD_Fetcher)[0];
+      this.fetcherHudComponent = this.props.fetcherHud.getComponents(HUD_FetcherVacuum)[0];
     }
 
     // this.async.setTimeout(() => {
@@ -56,7 +56,7 @@ export default class BagPackAnimator extends hz.Component<
 
   public setPlayer(player: Player | undefined) {
     if (!this.fetcherHudComponent && this.props.fetcherHud) {
-      this.fetcherHudComponent = this.props.fetcherHud.getComponents(HUD_Fetcher)[0];
+      this.fetcherHudComponent = this.props.fetcherHud.getComponents(HUD_FetcherVacuum)[0];
     }
 
     this.fetcherHudComponent?.setPlayer(player);

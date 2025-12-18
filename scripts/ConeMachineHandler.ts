@@ -41,7 +41,7 @@ export default class ConeMachineHandler extends hz.Component<
     );
   }
 
-  start() { }
+  start() {}
 
   HandleConeQuantityChange(
     itemKey: Items,
