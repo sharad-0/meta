@@ -20,8 +20,14 @@ import {
   playerManager,
   scooperHandManager,
   scooperManager,
+  serverManager,
 } from "Managers_Instance";
-import { RoleSwitched, RushHourBegins, RushHourEnds } from "Manager_Events";
+import {
+  PlayerSwitchedRoleEvent,
+  RoleSwitched,
+  RushHourBegins,
+  RushHourEnds,
+} from "Manager_Events";
 
 const MIN_PLAYERS = 1;
 
@@ -97,7 +103,11 @@ class LobbyPlatform extends Component<typeof LobbyPlatform> {
 
   updateRole(player: Player, role: string): void {
     if (playerManager?.getRole(player) === PlayerRoles.Scooper) {
-      scooperHandManager?.destroyItemAsset(player);
+      scooperHandManager?.emptyHand(player, true);
+    } else if (playerManager?.getRole(player) === PlayerRoles.Server) {
+      if (serverManager?.getConeForPlayer(player)) {
+        serverManager?.removeConeForPlayer(player, true);
+      }
     }
 
     playerManager?.setRole(player, role as PlayerRoles);

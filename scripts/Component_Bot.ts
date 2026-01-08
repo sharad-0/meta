@@ -10,6 +10,7 @@ import {
   CodeBlockEvents,
   Component,
   Entity,
+  GrabbableEntity,
   Handedness,
   Player,
   Vec3,
@@ -17,6 +18,7 @@ import {
 import NavMeshManager, { NavMesh, NavMeshPath } from "horizon/navmesh";
 import {
   Npc,
+  NpcGrabActionResult,
   NpcLocomotionOptions,
   NpcLocomotionResult,
   NpcPlayer,
@@ -24,6 +26,7 @@ import {
 import {
   inventoryManager,
   orderManager,
+  playerManager,
   serverManager,
   tableManager,
   vacuumController,
@@ -246,15 +249,17 @@ export default class Component_Bot extends Component<typeof Component_Bot> {
     // Return the array of Vec3 to use with NPC's moveToPositions method.
     return navMeshPath.waypoints;
   }
-  async grabObject(grabbableObject: Entity): Promise<void> {
+  async grabObject(grabbableObject: Entity): Promise<NpcGrabActionResult> {
     // getGrabbedEntity returns undefined if the NPC isn't holding anything.
     if (this.npcPlayer!.getGrabbedEntity(Handedness.Right) == undefined) {
       if (!grabbableObject.simulated.get()) {
         grabbableObject.simulated.set(true);
       }
-      await this.npcPlayer!.grab(Handedness.Right, grabbableObject);
-      // console.log.*$
+      const grabResult = await this.npcPlayer!.grab(Handedness.Right, grabbableObject);
+      console.log(`Bot Grab result: ${grabResult}`);
+      return grabResult;
     }
+    return NpcGrabActionResult.NotAllowed;
   }
 
   async dropObject(): Promise<void> {
@@ -321,6 +326,7 @@ export default class Component_Bot extends Component<typeof Component_Bot> {
         // this.executeFetcherBehavior();
       }
     };
+    const grabResult = await playerManager?.equipVacuumForBot(this.botPlayer!);
 
     try {
       if (!this.npcPlayer || !this.entity.exists()) {
@@ -330,6 +336,11 @@ export default class Component_Bot extends Component<typeof Component_Bot> {
 
       while (this.selfRole === PlayerRoles.Fetcher && this.entity.exists()) {
         try {
+          // if (!grabResult) {
+          //   console.error("Failed to equip vacuum for bot");
+          //   await restartFromScratch();
+          //   return;
+          // }
           // 1) Decide item
           const item = this.checkForItemToFetch();
 
@@ -556,25 +567,45 @@ export default class Component_Bot extends Component<typeof Component_Bot> {
               // Go to station
               await this.moveToDestination(serverStation.position.get());
 
-              // Re-check availability to avoid races
               const iceEntity =
                 orderManager?.getIceCreamEntityForCompletedOrder(tableId);
+              iceEntity?.as(GrabbableEntity).setWhoCanGrab([this.botPlayer!]);
 
+              console.log(`Bot Ice entity for table ${tableId}: ${iceEntity}`);
+              await sleep(3000);
               if (iceEntity) {
                 // Pick up the ice cream
-                await this.grabObject(iceEntity);
+                const result = await this.grabObject(iceEntity);
 
                 // Move to the table to deliver
                 const tableTag = "BotTableTrigger" + tableId;
                 const tableEntity = this.world.getEntitiesWithTags([
                   tableTag,
                 ])[0];
-                if (tableEntity) {
-                  // console.log.*$
-                  await this.moveToDestination(tableEntity.position.get());
-                  await this.onDeliverOrder(tableId);
+                if (result === NpcGrabActionResult.Success) {
+                  if (tableEntity) {
+                    // console.log.*$
+                    await this.moveToDestination(tableEntity.position.get());
+                    await this.onDeliverOrder(tableId);
+                  } else {
+                    console.error(`No table entity found for table ${tableId}`);
+                  }
                 } else {
-                  console.error(`No table entity found for table ${tableId}`);
+                  await sleep(2000);
+                  const result = await this.grabObject(iceEntity);
+
+                  // Move to the table to deliver
+                  const tableTag = "BotTableTrigger" + tableId;
+                  const tableEntity = this.world.getEntitiesWithTags([
+                    tableTag,
+                  ])[0];
+                  if (tableEntity) {
+                    // console.log.*$
+                    await this.moveToDestination(tableEntity.position.get());
+                    await this.onDeliverOrder(tableId);
+                  } else {
+                    console.error(`No table entity found for table ${tableId}`);
+                  }
                 }
 
                 handled = true;

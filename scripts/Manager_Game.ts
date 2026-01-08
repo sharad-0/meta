@@ -41,13 +41,13 @@ export default class Manager_Game extends hz.Component<typeof Manager_Game> {
     // console.log.*$
 
     this.connectLocalBroadcastEvent(PlayerJoinedEvent, ({ player }) => {
-      if (!Npc.playerIsNpc(player)) {
+      if (player.isValidReference && !Npc.playerIsNpc(player)) {
         this.onPlayerJoined(player);
       }
     });
   }
 
-  start() {}
+  start() { }
 
   onPlayerJoined(player: hz.Player) {
     // console.log.*$

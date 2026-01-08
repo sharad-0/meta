@@ -1,5 +1,5 @@
 import { Player, LocalEvent, Entity, NetworkEvent } from "horizon/core";
-import { PlayerRoles } from "Enums_Game";
+import { Items, PlayerRoles } from "Enums_Game";
 
 export const PlayerJoinedEvent = new LocalEvent<{ player: Player }>();
 export const PlayerLeftEvent = new LocalEvent<{ player: Player }>();
@@ -28,7 +28,11 @@ export const removePlayersFromUseTrash = new LocalEvent<{
 }>();
 export const ResetTrayForOrder = new LocalEvent<{
   trayId: string;
-  player: Player;
+  player?: Player;
+}>();
+export const OnPlayerDropItem = new LocalEvent<{
+  trayId: string;
+  player?: Player;
 }>();
 export const onPlayerTrashedItem = new LocalEvent<{
   player: Player;
@@ -143,6 +147,7 @@ export const RushHourEnds = new LocalEvent<{}>();
 export const RoleSwitched = new NetworkEvent<{
   player: Player;
 }>("RoleSwitched");
+
 export const PlayerNameStatsUpdatedEvent = new NetworkEvent<{
   player: Player;
   newRole: PlayerRoles;
@@ -159,3 +164,15 @@ export const PlayerExpUpdatedEvent = new NetworkEvent<{
   nextCap: number;
   level: number;
 }>("PlayerExpUpdatedEvent");
+
+// inventory update events
+
+export const OnPlayerInventoryItemQuantityChanged = new LocalEvent<{
+  itemKey: Items;
+  quantityChange: number;
+  currentQuantity: number;
+}>();
+
+export const OnPlayerGrabStatusChanged = new LocalEvent<{
+  player: Player;
+}>();

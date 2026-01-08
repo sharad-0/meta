@@ -84,7 +84,10 @@ export default class TableTrigger extends Component<typeof TableTrigger> {
       this.onPlayerExit.bind(this)
     );
 
-    this.connectLocalBroadcastEvent(ParlourClosedEvent, this.resetTrigger.bind(this));
+    this.connectLocalBroadcastEvent(
+      ParlourClosedEvent,
+      this.resetTrigger.bind(this)
+    );
     this.serverDeliveringSound =
       this.props.deliverSound?.as(AudioGizmo) ?? null;
     this.customerEatingSound = this.props.eatingSound?.as(AudioGizmo) ?? null;
@@ -123,7 +126,6 @@ export default class TableTrigger extends Component<typeof TableTrigger> {
       return;
     }
 
-
     if (!this.tableComp) return;
     //// console.log.*$
     // `[TableTrigger] Player ${player.id} entered trigger for table ${this.tableId}`
@@ -161,7 +163,6 @@ export default class TableTrigger extends Component<typeof TableTrigger> {
   }
 
   async serverDeliverOrder(player: Player) {
-
     const cone = serverManager?.getConeForPlayer(player);
     if (!cone) return;
 
@@ -273,7 +274,7 @@ export default class TableTrigger extends Component<typeof TableTrigger> {
     // //// console.log.*$
     // `[TableTrigger] Player ${player.id} exited cashier trigger for table ${this.tableId}`
     // );
-    cashierUIManager?.hideHud(player);
+    this.closeOrderHud(player);
     // // console.log.*$
     this.sendNetworkEvent(player, PlayerCameraEvents.SetCameraMode, {
       mode: CameraMode.Follow,
@@ -351,6 +352,17 @@ export default class TableTrigger extends Component<typeof TableTrigger> {
       );
     }
     hudManager?.showGreetingUiToPlayer(player, order, this.tableId);
+  }
+
+  closeOrderHud(player: Player) {
+    if (Npc.playerIsNpc(player)) return;
+    //// console.log.*$
+    // `Closing UI for player ${player.id}`
+    // );
+    this.sendNetworkEvent(player, PlayerCameraEvents.SetCameraMode, {
+      mode: CameraMode.Follow,
+    });
+    hudManager?.hideGreetingUiFromPlayer(player);
   }
 }
 

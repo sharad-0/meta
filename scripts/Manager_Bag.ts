@@ -7,6 +7,7 @@ import {
 import { playerManager } from "Managers_Instance";
 import { AnalyticsManager } from "AnalyticsManager";
 import { Npc } from "horizon/npc";
+import BagPackAnimator from "BagPackAnimator";
 
 /** A 4-slot bag keyed by the enum from Enums_Game. */
 type Bag = Record<Items, number>;
@@ -22,7 +23,7 @@ export default class Manager_Bag extends Component<typeof Manager_Bag> {
   private player1AttachedToBag: Player | null = null;
   private player2AttachedToBag: Player | null = null;
 
-  start(): void {}
+  start(): void { }
 
   // Helpers -------------------------------------------------------------------
   private _ensureBag(player: Player): Bag {
@@ -115,6 +116,12 @@ export default class Manager_Bag extends Component<typeof Manager_Bag> {
     const bag = this._ensureBag(player);
     ITEM_VALUES.forEach((key) => (bag[key] = 0));
     this._emit(player);
+    const vacuumEntity = playerManager?.getVacuumEntityByPlayer(player);
+    if (vacuumEntity) {
+      const bagPackComp = vacuumEntity.getComponents(BagPackAnimator)[0];
+      bagPackComp.animateGunForItems(0);
+    }
+
   }
 
   setBagCapacity(player: Player, capacity: number): void {

@@ -30,7 +30,7 @@ export default class Manager_Server extends hz.Component<
   private conesInTable = new Set<Component_IceCreamCone>();
   private conesByPlayer = new Map<Player, Component_IceCreamCone>();
 
-  preStart(): void { }
+  preStart(): void {}
 
   start(): void {
     // Ensure clean state on (re)start
@@ -39,21 +39,25 @@ export default class Manager_Server extends hz.Component<
     this.connectCodeBlockEvent(
       this.entity,
       hz.CodeBlockEvents.OnPlayerExitWorld,
-      (player) => this.onPlayerExitWorld(player)
+      (player) => this.onPlayerExitWorld(player, true)
     );
   }
 
-  onPlayerExitWorld(player: Player) {
+  onPlayerExitWorld(player: Player, destroyCone: boolean = false) {
     const cone = this.getConeForPlayer(player);
     if (cone) {
       const orderId = cone.getConeOrderId();
       const tableId = orderManager?.getTableForOrder(orderId ?? 0);
-      if (orderId && tableId) {
-        orderManager?.removeIceCreamEntityForCompletedOrder(tableId);
-        orderManager?.markOrderAsAccepted(orderId, false);
-        HUD_Scooper.get().resetOrderColor(tableId);
-      }
-      this.removeConeForPlayer(player, true);
+      this.ResetServerTable(orderId ?? 0, tableId ?? "");
+      this.removeConeForPlayer(player, destroyCone);
+    }
+  }
+
+  ResetServerTable(orderId: number, tableId: string) {
+    if (orderId && tableId) {
+      orderManager?.removeIceCreamEntityForCompletedOrder(tableId);
+      orderManager?.markOrderAsAccepted(orderId, false);
+      HUD_Scooper.get().resetOrderColor(tableId);
     }
   }
 
@@ -161,21 +165,22 @@ export default class Manager_Server extends hz.Component<
 
   /**
    * Remove the cone mapping for a player id.
-   * Optionally records a ServeOrder action for the Server role.
    */
-  removeConeForPlayer(player: Player, awardAction?: boolean): void {
+  removeConeForPlayer(player: Player, destroyOnComplete: boolean): void {
     if (!this.conesByPlayer.has(player)) return;
 
     const cone = this.conesByPlayer.get(player);
-    if (cone) {
+    if (cone && destroyOnComplete) {
       const orderId = cone.getConeOrderId();
       if (orderId) {
         const tableId = orderManager?.getTableForOrder(orderId);
         if (tableId) {
-          this.sendLocalBroadcastEvent(ResetTrayForOrder, { trayId: tableId, player });
+          this.sendLocalBroadcastEvent(ResetTrayForOrder, {
+            trayId: tableId,
+            player,
+          });
         }
       }
-      cone.entity.visible.set(false);
       this.world.deleteAsset(cone.entity);
       this.sendLocalBroadcastEvent(removePlayersFromUseTrash, { player });
       // cone.resetCone();
@@ -198,7 +203,7 @@ export default class Manager_Server extends hz.Component<
   onParlourClosed() {
     // console.log.*$
     Array.from(this.conesByPlayer).forEach(([player, cone]) => {
-      this.removeConeForPlayer(player);
+      this.removeConeForPlayer(player, true);
     });
     this.conesInTable.forEach((cone) => {
       cone.resetCone();

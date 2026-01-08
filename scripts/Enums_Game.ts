@@ -61,6 +61,16 @@ export enum PlayerRoles {
   Server = "Server",
   Unknown = "Unknown",
 }
+export enum ConeState {
+  ConeMachine = "ConeMachine",
+  ScooperHand = "ScooperHand",
+  ScooperFloating = "ScooperFloating",
+  ScooperTray = "ScooperTray",
+  ServerTray = "ServerTray",
+  ServerHand = "ServerHand",
+  ServerFloating = "ServerFloating",
+  Served = "Served",
+}
 
 export type Role = "Fetcher" | "Scooper" | "Server";
 
@@ -240,10 +250,10 @@ export const CustomerPaymentData = [
 ];
 
 export const itemVsMachineAnimationName = {
-  [Items.Cone]: "Cone_machineee",
-  [Items.Vanilla]: "Strawberry_anim",
-  [Items.Strawberry]: "Strawberry_anim",
-  [Items.Chocolate]: "Strawberry_anim",
+  [Items.Cone]: "cone_machine",
+  [Items.Vanilla]: "cream_machine",
+  [Items.Strawberry]: "cream_machine",
+  [Items.Chocolate]: "cream_machine",
 };
 
 export const xpThresholdsPerLevel = [

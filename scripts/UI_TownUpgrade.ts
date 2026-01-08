@@ -34,7 +34,7 @@ import {
 } from "Helper_TownHouseUpgrade";
 import { TextureAsset } from "horizon/2p";
 import { CustomEventPayload, Turbo, TurboEvents } from "horizon/analytics";
-import { Asset, Player } from "horizon/core";
+import { Asset, Player, PlayerDeviceType } from "horizon/core";
 import {
   Binding,
   Callback,
@@ -138,10 +138,13 @@ export default class UI_TownUpgrade extends UIComponent<typeof UI_TownUpgrade> {
     { length: this.waffleItemsLength },
     () => new Binding(true)
   );
-
+  scaleBinding: Binding<number> = new Binding(1);
+  backgroundColorOverlayBinding: Binding<string> = new Binding("#000000de");
   canAfford: Binding<boolean> = new Binding(false);
   isPurchasable: Binding<boolean> = new Binding(false);
-
+  uiWidthBinding: Binding<string> = new Binding("100%");
+  uiHeightBinding: Binding<string> = new Binding("100%");
+  topMarginBinding: Binding<string> = new Binding("0%");
   /* State Variables */
   selectedTab: TownUpgradeTabTypes = TownUpgradeTabTypes.Customization;
   selectedItemAssetId: string = "";
@@ -220,7 +223,6 @@ export default class UI_TownUpgrade extends UIComponent<typeof UI_TownUpgrade> {
     //   this.setPlayer(player);
     //   this.refreshTownUpgradeUI();
     // }
-
     this.connectLocalBroadcastEvent(ParlourClosedEvent, () => {
       this.onClosePressed?.();
     });
@@ -231,6 +233,25 @@ export default class UI_TownUpgrade extends UIComponent<typeof UI_TownUpgrade> {
     const playerHouseData = playerManager?.getHouseUpgrade(this.player!)!;
     if (this.player && playerHouseData) {
       this.playerHouseData = JSON.parse(JSON.stringify(playerHouseData));
+    }
+    if (this.player) {
+      const deviveType = this.player.deviceType.get();
+      if (deviveType === PlayerDeviceType.VR) {
+        this.uiWidthBinding.set("95%");
+        this.uiHeightBinding.set("100%");
+        this.topMarginBinding.set("15%");
+        this.backgroundColorOverlayBinding.set("rgba(0, 0, 0, 0)");
+        this.scaleBinding.set(0.9);
+
+
+      } else {
+        this.uiWidthBinding.set("100%");
+        this.uiHeightBinding.set("100%");
+        this.topMarginBinding.set("0%");
+        this.backgroundColorOverlayBinding.set("#000000de");
+        this.scaleBinding.set(1);
+
+      }
     }
     this.refreshTownUpgradeUI();
   }
@@ -245,16 +266,17 @@ export default class UI_TownUpgrade extends UIComponent<typeof UI_TownUpgrade> {
     this.playerHouseItemCardsBinding.set(this.itemCards);
     return View({
       style: {
-        width: "100%",
-        height: "100%",
-        left: 0,
-        right: 0,
-        top: 0,
-        bottom: 0,
+        width: this.uiWidthBinding,
+        height: this.uiHeightBinding,
+        // left: 0,
+        // right: 0,
+        top: this.topMarginBinding,
         justifyContent: "center",
         alignItems: "center",
-        backgroundColor: "#000000de",
+        backgroundColor: this.backgroundColorOverlayBinding,
         zIndex: 1000,
+        transform: [{ scale: this.scaleBinding }],
+
       },
       children: [this.backgroundImage()],
     });
@@ -273,6 +295,8 @@ export default class UI_TownUpgrade extends UIComponent<typeof UI_TownUpgrade> {
         bottom: `${backgroundImage.bottomPercent}%`,
         justifyContent: "center",
         alignItems: "center",
+        transform: [{ scale: this.scaleBinding }],
+
         // backgroundColor: "#000000",
       },
       children: [
@@ -285,11 +309,20 @@ export default class UI_TownUpgrade extends UIComponent<typeof UI_TownUpgrade> {
           },
         }),
 
-        this.leftContentContainer(),
-        this.topScrollContainer(),
-        this.tabContentContainer(),
-        this.closeButton(),
-      ],
+        View({
+          children: [this.leftContentContainer(),
+          this.topScrollContainer(),
+          this.tabContentContainer(),
+          this.closeButton(),
+          ],
+          style: {
+            width: "100%",
+            height: "100%",
+            position: "absolute",
+            justifyContent: "center",
+            alignItems: "center",
+          }
+        })],
     });
   }
 
@@ -534,6 +567,7 @@ export default class UI_TownUpgrade extends UIComponent<typeof UI_TownUpgrade> {
         // backgroundColor: "rgba(255, 0, 0, 0.6)",
         borderTopRightRadius: 30,
         borderBottomRightRadius: 30,
+        // transform: [{ rotate: "-90deg" }],
       },
       children: [
         View({

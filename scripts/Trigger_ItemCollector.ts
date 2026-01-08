@@ -183,7 +183,13 @@ export default class ItemCollector extends Component<typeof ItemCollector> {
       bagPackComp.vacuumThrow(true);
     }
   }
-
+  animateGunForItems(player: Player, itemCount: number) {
+    const vacuumEntity = playerManager?.getVacuumEntityByPlayer(player);
+    if (vacuumEntity) {
+      const bagPackComp = vacuumEntity.getComponents(BagPackAnimator)[0];
+      bagPackComp.animateGunForItems(itemCount);
+    }
+  }
   markItemCollected(
     actuallyTaken: number,
     player: Player,
@@ -195,7 +201,8 @@ export default class ItemCollector extends Component<typeof ItemCollector> {
 
       playerManager?.addFetcherAction(player, actuallyTaken);
       snowflakeManager?.addSnowflakeCurrencyToPlayer(player);
-
+      const currentItemAmount = bagManager?.getTotalItemCount(player) ?? 0;
+      this.animateGunForItems(player, currentItemAmount);
       // this.updateProgressBar();
       this.playSound();
 
@@ -428,7 +435,7 @@ export default class ItemCollector extends Component<typeof ItemCollector> {
     if (assetRoot) {
       assetRoot.setAnimationParameterBool(
         itemVsMachineAnimationName[
-          this.props.itemKey as keyof typeof itemVsMachineAnimationName
+        this.props.itemKey as keyof typeof itemVsMachineAnimationName
         ],
         true
       );
@@ -471,7 +478,7 @@ export default class ItemCollector extends Component<typeof ItemCollector> {
     if (assetRoot) {
       assetRoot.setAnimationParameterBool(
         itemVsMachineAnimationName[
-          this.props.itemKey as keyof typeof itemVsMachineAnimationName
+        this.props.itemKey as keyof typeof itemVsMachineAnimationName
         ],
         false
       );

@@ -2,10 +2,13 @@ import * as hz from "horizon/core";
 import { Player } from "horizon/core";
 import {
   addPlayersToUseTrash,
+  OnPlayerDropItem,
+  OnPlayerGrabStatusChanged,
   pickedItemFromTray,
   playerPickedItem,
   PlayerSwitchedRoleEvent,
   removePlayersFromUseTrash,
+  ResetTrayForOrder,
 } from "Manager_Events";
 import {
   botManager,
@@ -17,7 +20,7 @@ import {
   serverManager,
   themeSessionManager,
 } from "Managers_Instance";
-import { IceCream, Items, PlayerRoles } from "Enums_Game";
+import { ConeState, IceCream, Items, PlayerRoles } from "Enums_Game";
 import { MeshEntity, TextureAsset } from "horizon/2p";
 
 export type Status = "Under Process" | "Ready To Serve";
@@ -57,8 +60,12 @@ class Component_IceCreamCone extends hz.Component<
   private conePickupSound: hz.AudioGizmo | null = null;
   private grabbableEntity: hz.GrabbableEntity | null = null;
   private playersAbleToGrab: Player[] = [];
-
+  private hasLeftMachine: boolean = false;
+  private destroyTimeoutId: number = -1;
+  private coneState: ConeState = ConeState.ConeMachine;
   start() {
+    this.hasLeftMachine = false;
+    this.coneState = ConeState.ConeMachine;
     this.hideAllScoop();
     this.hideAllAddons();
     this.grabbableEntity = this.entity.as(hz.GrabbableEntity);
@@ -86,6 +93,13 @@ class Component_IceCreamCone extends hz.Component<
 
     this.connectLocalBroadcastEvent(PlayerSwitchedRoleEvent, () =>
       this.makeConeGrabbable()
+    );
+
+    this.connectLocalBroadcastEvent(PlayerSwitchedRoleEvent, () =>
+      this.HandleFloatingConeGrab()
+    );
+    this.connectLocalBroadcastEvent(OnPlayerGrabStatusChanged, () =>
+      this.HandleFloatingConeGrab()
     );
 
     this.conePickupSound = this.props.pickupSound?.as(hz.AudioGizmo) ?? null;
@@ -131,14 +145,14 @@ class Component_IceCreamCone extends hz.Component<
       itemLength === 1
         ? this.props.scoop_1
         : itemLength === 2
-          ? this.props.scoop_2
-          : this.props.scoop_3;
+        ? this.props.scoop_2
+        : this.props.scoop_3;
     const texture = (
       item === Items.Vanilla
         ? this.props.item1Texture
         : item === Items.Strawberry
-          ? this.props.item2Texture
-          : this.props.item3Texture
+        ? this.props.item2Texture
+        : this.props.item3Texture
     ) as TextureAsset | null;
 
     if (scoop && texture) {
@@ -164,8 +178,8 @@ class Component_IceCreamCone extends hz.Component<
       itemLength === 2
         ? this.props.scoop1_AddOn
         : itemLength === 3
-          ? this.props.scoop2_AddOn
-          : this.props.scoop3_AddOn;
+        ? this.props.scoop2_AddOn
+        : this.props.scoop3_AddOn;
 
     if (!addOn) return;
     const tray = this.props.trayObject;
@@ -248,6 +262,8 @@ class Component_IceCreamCone extends hz.Component<
           );
           return;
         }
+        this.SetConeState(ConeState.ServerHand);
+        this.DisableDestroyTimer();
 
         if (!serverManager?.playerPickedCone(player, this)) {
           console.warn(
@@ -278,10 +294,14 @@ class Component_IceCreamCone extends hz.Component<
         break;
       case PlayerRoles.Scooper:
         // if (this.props.coneObject) {
-
-        player.setAvatarGripPoseOverride(hz.AvatarGripPose.CarryHeavy);
-        scooperHandManager?.activeEntityInHand.set(player, this.entity);
-        inventoryManager?.remove(Items.Cone, 1);
+        this.SetConeState(ConeState.ScooperHand);
+        this.DisableDestroyTimer();
+        // player.setAvatarGripPoseOverride(hz.AvatarGripPose.CarryHeavy);
+        scooperHandManager?.setHand(player, this.entity, Items.Cone);
+        if (!this.hasLeftMachine) {
+          this.hasLeftMachine = true;
+          inventoryManager?.remove(Items.Cone, 1);
+        }
         this.entity.visible.set(true);
         this.sendLocalBroadcastEvent(addPlayersToUseTrash, { player });
         // }
@@ -299,12 +319,62 @@ class Component_IceCreamCone extends hz.Component<
       );
       return;
     }
+    if (this.coneState === ConeState.ServerHand) {
+      this.SetConeState(ConeState.ServerFloating);
+      this.EnableDestroyTimer(12);
+    } else if (this.coneState === ConeState.ScooperHand) {
+      this.SetConeState(ConeState.ScooperFloating);
+      this.EnableDestroyTimer(12);
+    }
 
     switch (playerRec.role) {
-      case "Server":
+      case PlayerRoles.Server:
         serverManager?.removeConeForPlayer(player, false);
+        const orderId = this.getConeOrderId();
+        if (orderId) {
+          const tableId = orderManager?.getTableForOrder(orderId);
+          if (tableId) {
+            this.sendLocalBroadcastEvent(OnPlayerDropItem, {
+              trayId: tableId,
+              player,
+            });
+          }
+        }
+        break;
+      case PlayerRoles.Scooper:
+        scooperHandManager?.emptyHand(player, false);
+        player.clearAvatarGripPoseOverride();
+        break;
     }
     this.sendLocalBroadcastEvent(removePlayersFromUseTrash, { player: player });
+  }
+
+  public EnableDestroyTimer(seconds: number) {
+    this.destroyTimeoutId = this.async.setTimeout(() => {
+      if (this.coneState === ConeState.ServerFloating) {
+        const tableId = orderManager?.getTableForOrder(
+          this.getConeOrderId() ?? 0
+        );
+        serverManager?.ResetServerTable(
+          this.getConeOrderId() ?? 0,
+          tableId ?? ""
+        );
+
+        if (this.iceCreamData) {
+          const orderId = this.iceCreamData.orderId;
+          const tableId = orderManager?.getTableForOrder(orderId);
+          if (tableId) {
+            this.sendLocalBroadcastEvent(ResetTrayForOrder, {
+              trayId: tableId,
+            });
+          }
+        }
+      }
+      this.world.deleteAsset(this.entity, true);
+    }, seconds * 1000);
+  }
+  public async DisableDestroyTimer() {
+    this.async.clearTimeout(this.destroyTimeoutId);
   }
 
   private makeConeUngrabbable() {
@@ -338,6 +408,13 @@ class Component_IceCreamCone extends hz.Component<
       //   } for players: ${this.playersAbleToGrab.map((p) => p.id).join(", ")}`
       // );
       try {
+        console.log(
+          `Setting grabbable entity for ${
+            this.entity.id
+          } with players ${this.playersAbleToGrab
+            .map((p) => p.name.get())
+            .join(", ")}`
+        );
         this.grabbableEntity.setWhoCanGrab(this.playersAbleToGrab);
       } catch {
         // console.log.*$
@@ -385,6 +462,49 @@ class Component_IceCreamCone extends hz.Component<
     if (this.grabbableEntity) {
       this.handleGrabTrigger();
     }
+  }
+  public HandleFloatingConeGrab() {
+    if (this.coneState === ConeState.ScooperFloating) {
+      this.AllowScoopersToGrab();
+    } else if (this.coneState === ConeState.ServerFloating) {
+      this.AllowServersToGrab();
+    } else if (this.coneState === ConeState.ScooperTray) {
+      this.grabbableEntity?.setWhoCanGrab([]);
+    }
+  }
+  public AllowScoopersToGrab() {
+    let scoopers: Player[] = [];
+    scoopers = playerManager?.getRolePlayers(PlayerRoles.Scooper) ?? [];
+    const serverBot = botManager?.getBotPlayersFromRole(PlayerRoles.Scooper);
+    if (serverBot) {
+      scoopers = [...scoopers, ...serverBot];
+    }
+    let emptyHandledScoopers: Player[] = [];
+    scoopers.forEach((scooper) => {
+      if (!scooperHandManager?.isHandFull(scooper)) {
+        emptyHandledScoopers.push(scooper);
+      }
+    });
+    this.grabbableEntity?.setWhoCanGrab(emptyHandledScoopers);
+  }
+  public AllowServersToGrab() {
+    let servers: Player[] = [];
+    servers = playerManager?.getRolePlayers(PlayerRoles.Server) ?? [];
+    const serverBot = botManager?.getBotPlayersFromRole(PlayerRoles.Server);
+    if (serverBot) {
+      servers = [...servers, ...serverBot];
+    }
+    let emptyHandledServers: Player[] = [];
+    servers.forEach((server) => {
+      if (!serverManager?.getConeForPlayer(server)) {
+        emptyHandledServers.push(server);
+      }
+    });
+    this.grabbableEntity?.setWhoCanGrab(emptyHandledServers);
+  }
+  public SetConeState(coneState: ConeState) {
+    this.coneState = coneState;
+    this.HandleFloatingConeGrab();
   }
 }
 hz.Component.register(Component_IceCreamCone);

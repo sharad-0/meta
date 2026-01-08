@@ -27,6 +27,7 @@ import Manager_Bot from "Manager_Bot";
 import { HapticsManager } from "HapticsManager";
 import Manager_Theme from "Manager_Theme";
 import Manager_Snowflake from "Manager_Snowflake";
+import ConeMachineHandler from "ConeMachineHandler";
 
 export let playerManager: Manager_Player | null = null;
 export let gameManager: Manager_Game | null = null;
@@ -38,6 +39,7 @@ export let inventoryManager: Manager_Inventory | null = null;
 export let tableManager: Manager_Table | null = null;
 export let hudManager: Manager_PlayerHud | null = null;
 export let scooperManager: Manager_Scooper | null = null;
+export let coneMachineHandler: ConeMachineHandler | null = null;
 export let scooperHandManager: Manager_Scooper_Hand | null = null;
 export let serverManager: Manager_Server | null = null;
 export let cashierManager: Manager_Cashier | null = null;
@@ -87,6 +89,7 @@ export default class Managers_Instance extends hz.Component<
     HapticsManager: { type: hz.PropTypes.Entity },
     themeSessionmanager: { type: hz.PropTypes.Entity },
     snowflakeManager: { type: hz.PropTypes.Entity },
+    coneMachineHandler: { type: hz.PropTypes.Entity },
 
     // NavMeshManager: { type: hz.PropTypes.Entity },
     // NPCManager: { type: hz.PropTypes.Entity },
@@ -126,7 +129,6 @@ export default class Managers_Instance extends hz.Component<
 
     snowflakeManager =
       this.props.snowflakeManager?.getComponents(Manager_Snowflake)[0] ?? null;
-
 
     playerManager = Manager_Player.get() ?? null;
     if (!playerManager) {
@@ -277,6 +279,12 @@ export default class Managers_Instance extends hz.Component<
       throw new Error("HapticsManager is not set or not found.");
     }
 
+    coneMachineHandler =
+      this.props.coneMachineHandler?.getComponents(ConeMachineHandler)[0] ??
+      null;
+    if (!coneMachineHandler) {
+      throw new Error("coneMachineHandler is not set or not found");
+    }
     // cashPoolManager = this.props.CashPoolManager?.getComponents(Manager_CashPool)[0] ?? null;
     // if (!cashPoolManager) {
     //   throw new Error("CashPoolManager is not set or not found.");
